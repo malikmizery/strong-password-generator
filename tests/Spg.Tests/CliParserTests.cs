@@ -70,6 +70,65 @@ public class CliParserTests
     }
 
     [Fact]
+    public void KeyFlag_WritesToTheDefaultEnvFile()
+    {
+        var options = ParseOk("-k", "DB_PASSWORD");
+
+        Assert.Equal("DB_PASSWORD", options.EnvKey);
+        Assert.Equal(".env", options.EnvFile);
+        Assert.False(options.Force);
+        Assert.True(options.Password.EnvSafe);
+    }
+
+    [Fact]
+    public void KeyFlag_AcceptsFileAndForce()
+    {
+        var options = ParseOk("--key", "API_TOKEN", "--file", "deploy/.env.prod", "--force");
+
+        Assert.Equal("API_TOKEN", options.EnvKey);
+        Assert.Equal("deploy/.env.prod", options.EnvFile);
+        Assert.True(options.Force);
+    }
+
+    [Fact]
+    public void KeyFlag_WithUserSecrets_TakesProjectAndId()
+    {
+        var options = ParseOk("-k", "Db:Password", "-u", "--project", "src/Web", "--id", "abc");
+
+        Assert.Equal("Db:Password", options.EnvKey);
+        Assert.True(options.UserSecrets);
+        Assert.Equal("src/Web", options.Project);
+        Assert.Equal("abc", options.SecretsId);
+        Assert.True(options.Password.EnvSafe);
+    }
+
+    [Fact]
+    public void KeyFlag_WithDashFile_MeansStdout() =>
+        Assert.Equal("-", ParseOk("-k", "KEY", "-f", "-").EnvFile);
+
+    [Fact]
+    public void StdinFlag_ReadsTheSecretInsteadOfGenerating()
+    {
+        var options = ParseOk("--stdin", "-k", "KEY");
+
+        Assert.True(options.FromStdin);
+        Assert.Equal("KEY", options.EnvKey);
+    }
+
+    [Fact]
+    public void CopyFlag_IsApplied()
+    {
+        var options = ParseOk("-c", "-l", "32");
+
+        Assert.True(options.Copy);
+        Assert.Equal(32, options.Password.Length);
+    }
+
+    [Fact]
+    public void KeyFlag_WorksWithPassphrases() =>
+        Assert.Equal(GenerationMode.Passphrase, ParseOk("-p", "-k", "SECRET").Mode);
+
+    [Fact]
     public void PassphraseFlags_AreApplied()
     {
         var options = ParseOk("-p", "-w", "8", "-s", ".", "--no-capitalize", "--no-digit");
@@ -106,6 +165,28 @@ public class CliParserTests
     [InlineData("-p -e", "-e")]
     [InlineData("-p -x abc", "-x")]
     [InlineData("-x", "-x")]
+    [InlineData("-k", "-k")]
+    [InlineData("-k 1BAD", "1BAD")]
+    [InlineData("-k DB-PASS", "DB-PASS")]
+    [InlineData("-k KEY -n 2", "-n")]
+    [InlineData("-f .env", "-f")]
+    [InlineData("--force", "--force")]
+    [InlineData("-p -k KEY -s $", "-s")]
+    [InlineData("-p -k KEY -s #", "-s")]
+    [InlineData("-k Db:Password", "Db:Password")]
+    [InlineData("-k KEY -u -f .env", "-f")]
+    [InlineData("-k KEY -u --force", "--force")]
+    [InlineData("-u", "-u")]
+    [InlineData("--project x", "--project")]
+    [InlineData("--id x", "--id")]
+    [InlineData("-k KEY --project x", "--project")]
+    [InlineData("--stdin", "--stdin")]
+    [InlineData("--stdin -c", "--stdin")]
+    [InlineData("--stdin -k KEY -l 20", "-l")]
+    [InlineData("--stdin -k KEY -p", "-p")]
+    [InlineData("--stdin -k KEY -q", "-q")]
+    [InlineData("-c -n 2", "-n")]
+    [InlineData("-c -k KEY", "-c")]
     public void BadArguments_ReportTheOffendingToken(string args, string token) =>
         Assert.Contains(token, ParseError(args.Split(' ')));
 

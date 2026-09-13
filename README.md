@@ -11,9 +11,13 @@ spg -a                              # no look-alikes: 0 O 1 l I |
 spg -e                              # .env-safe: no $ or #
 spg -x '&*'                         # leave out whatever a site rejects
 spg -A                              # all punctuation, not just !@#$%^&*
+spg -c                              # copy to the clipboard, print nothing
+spg -k DB_PASSWORD                  # write DB_PASSWORD=... into ./.env, print nothing
+spg -k Db:Password -u               # store in dotnet user secrets, print nothing
+spg --stdin -k DB_PASSWORD          # store a password you already have, quoted for .env
 spg -p                  -> gravity-Unsaid-pelican-omen3-trilogy-shrank
 spg -p -w 8 -s . --no-capitalize --no-digit
-spg -q | clip                       # stdout carries only the passwords
+spg -q                              # stdout carries only the passwords, nothing on stderr
 spg --help
 ```
 
@@ -36,6 +40,44 @@ Three flags narrow the set further, and the entropy estimate accounts for them:
   dashboards). Use this whenever the password is going into a `.env` file or a compose file.
 - `-x, --exclude <chars>` drops any characters you list, e.g. `-x '&*'` for a site that refuses them.
   A set that ends up empty is simply dropped.
+
+## Storing instead of printing
+
+By default the password is printed. Three flags send it somewhere else and leave stdout empty;
+stderr then says only where it went, plus the entropy.
+
+```text
+spg -c                                # clipboard (clip / pbcopy / wl-copy / xclip)
+spg -k DB_PASSWORD                    # appends DB_PASSWORD=<password> to ./.env
+spg -k API_TOKEN -f deploy/.env.prod  # another file
+spg -k DB_PASSWORD --force            # replace an existing entry in place
+spg -k DB_PASSWORD -f -               # just print the DB_PASSWORD=... line
+spg -k PHRASE -p -w 7                 # a passphrase works too
+spg -k Db:Password -u                 # dotnet user secrets (project in the current folder)
+spg -k Db:Password -u --project src/Web
+```
+
+`-k, --key` implies `-e`, so the value needs no quoting. It refuses to overwrite an existing key
+unless you pass `--force`, a `.env` file it creates on Linux/macOS is mode `600`, and everything else
+in the file is left byte-for-byte as it was. `-u, --user-secrets` runs `dotnet user-secrets set`,
+feeding the value through stdin so it never appears on a command line (the project needs a
+`UserSecretsId`; run `dotnet user-secrets init` once).
+
+## Storing a password you already have
+
+If a password with `$` or `#` in it broke your `.env` file, you do not have to change the password —
+you have to quote it. `--stdin` reads a password from stdin and stores it with the quoting every
+common loader agrees on: bare when nothing needs escaping, otherwise single quotes.
+
+```text
+spg --stdin -k DB_PASSWORD            # paste it at the prompt; appends DB_PASSWORD='pa$$w#rd' to ./.env
+spg --stdin -k DB_PASSWORD -f -       # just print the quoted line
+spg --stdin -k Db:Password -u         # or into dotnet user secrets
+```
+
+The password is read from stdin on purpose: as a command-line argument it would land in your shell
+history and be visible to every process on the machine. A password containing both `'` and `$` is
+refused, because no `.env` spelling of it is portable across loaders — generate a new one instead.
 
 ## Install (Windows)
 

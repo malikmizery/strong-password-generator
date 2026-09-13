@@ -22,6 +22,9 @@ public static class CliParser
           spg                      Interactive mode (prompts for every option)
           spg [options]            Random-character password
           spg --passphrase [opts]  Passphrase from the EFF long word list
+          spg -c [options]         Copy to the clipboard instead of printing
+          spg -k NAME [options]    Store as NAME in a .env file (or -u: dotnet user secrets) instead of printing
+          spg --stdin -k NAME      Store a password you paste on stdin, quoted correctly for .env
 
         Password options:
           -l, --length <n>         Number of characters (default 20)
@@ -40,6 +43,17 @@ public static class CliParser
           -s, --separator <text>   Text between words (default "-"; "" for none)
               --no-capitalize      Don't capitalize a random word
               --no-digit           Don't append a digit to a random word
+
+        Storing instead of printing:
+          -c, --copy               Copy the secret to the clipboard; nothing goes to stdout
+          -k, --key <NAME>         Append NAME=<secret> to a .env file; nothing goes to stdout (implies -e)
+          -f, --file <path>        The .env file (default ./.env; "-" prints the NAME=<secret> line)
+              --force              Replace NAME if it is already there
+          -u, --user-secrets       Store NAME with `dotnet user-secrets set` instead of a .env file
+              --project <path>     Project for --user-secrets (default: the current folder)
+              --id <id>            UserSecretsId for --user-secrets, instead of a project
+              --stdin              Read the secret from stdin instead of generating one, so an existing
+                                   password can be stored quoted correctly (never pass it as an argument)
 
         General:
           -n, --count <n>          How many to generate (default 1)
@@ -70,6 +84,11 @@ public static class CliParser
         var options = new CliOptions();
         string? passwordFlag = null;
         string? passphraseFlag = null;
+        string? envFlag = null;
+        string? userSecretsFlag = null;
+        string? separatorFlag = null;
+        string? generationFlag = null;
+        string? countFlag = null;
 
         for (var i = 0; i < args.Count; i++)
         {
@@ -80,12 +99,21 @@ public static class CliParser
             {
                 case "-p" or "--passphrase":
                     options = options with { Mode = GenerationMode.Passphrase };
+                    generationFlag ??= flag;
                     break;
                 case "-n" or "--count":
                     options = options with { Count = ParseInt(flag, NextValue()) };
+                    countFlag = flag;
                     break;
                 case "-q" or "--quiet":
                     options = options with { Quiet = true };
+                    generationFlag ??= flag;
+                    break;
+                case "-c" or "--copy":
+                    options = options with { Copy = true };
+                    break;
+                case "--stdin":
+                    options = options with { FromStdin = true };
                     break;
 
                 case "-l" or "--length":
@@ -132,6 +160,7 @@ public static class CliParser
                 case "-s" or "--separator":
                     options = options with { Passphrase = options.Passphrase with { Separator = NextValue() } };
                     passphraseFlag ??= flag;
+                    separatorFlag = flag;
                     break;
                 case "--no-capitalize":
                     options = options with { Passphrase = options.Passphrase with { Capitalize = false } };
@@ -140,6 +169,30 @@ public static class CliParser
                 case "--no-digit":
                     options = options with { Passphrase = options.Passphrase with { AddDigit = false } };
                     passphraseFlag ??= flag;
+                    break;
+
+                case "-k" or "--key":
+                    options = options with { EnvKey = NextValue() };
+                    break;
+                case "-f" or "--file":
+                    options = options with { EnvFile = NextValue() };
+                    envFlag ??= flag;
+                    break;
+                case "--force":
+                    options = options with { Force = true };
+                    envFlag ??= flag;
+                    break;
+                case "-u" or "--user-secrets":
+                    options = options with { UserSecrets = true };
+                    userSecretsFlag ??= flag;
+                    break;
+                case "--project":
+                    options = options with { Project = NextValue() };
+                    userSecretsFlag ??= flag;
+                    break;
+                case "--id":
+                    options = options with { SecretsId = NextValue() };
+                    userSecretsFlag ??= flag;
                     break;
 
                 default:
@@ -152,6 +205,41 @@ public static class CliParser
             throw new UsageException($"{passwordFlag} cannot be used with --passphrase.");
         if (options.Mode == GenerationMode.Password && passphraseFlag is not null)
             throw new UsageException($"{passphraseFlag} requires --passphrase.");
+        if (options.EnvKey is null && envFlag is not null)
+            throw new UsageException($"{envFlag} requires --key.");
+        if (options.EnvKey is null && userSecretsFlag is not null)
+            throw new UsageException($"{userSecretsFlag} requires --key.");
+        if (!options.UserSecrets && userSecretsFlag is not null)
+            throw new UsageException($"{userSecretsFlag} requires --user-secrets.");
+        if (options.UserSecrets && envFlag is not null)
+            throw new UsageException($"{envFlag} only applies to a .env file, not --user-secrets.");
+        if (options.Copy && options.EnvKey is not null)
+            throw new UsageException("-c/--copy cannot be used with --key; pick one destination.");
+        if ((options.Copy || options.EnvKey is not null) && options.Count != 1)
+            throw new UsageException($"{countFlag} cannot be used when storing the secret; one destination holds one secret.");
+
+        if (options.FromStdin)
+        {
+            if (options.EnvKey is null)
+                throw new UsageException("--stdin requires --key: it stores a password you already have.");
+            if ((generationFlag ?? passwordFlag ?? passphraseFlag ?? countFlag) is { } flag)
+                throw new UsageException($"{flag} cannot be used with --stdin; nothing is generated.");
+        }
+
+        if (options.EnvKey is { } key)
+        {
+            var pattern = options.UserSecrets ? UserSecrets.KeyPattern : EnvFile.KeyPattern;
+            if (!pattern.IsMatch(key))
+                throw new UsageException(options.UserSecrets
+                    ? $"'{key}' is not a valid configuration key."
+                    : $"'{key}' is not a valid variable name (letters, digits and _, not starting with a digit; use -u for a configuration key such as Db:Password).");
+
+            // A generated value is written unquoted, so it must not contain anything a .env loader would reinterpret.
+            options = options with { Password = options.Password with { EnvSafe = true } };
+            if (options.Mode == GenerationMode.Passphrase
+                && options.Passphrase.Separator.Any(c => CharacterSets.EnvUnsafe.Contains(c) || char.IsWhiteSpace(c) || c is '"' or '\'' or '\\' or '`'))
+                throw new UsageException($"{separatorFlag} must not contain $, #, quotes, backslash or whitespace when writing to a .env file.");
+        }
 
         var error = options.Mode == GenerationMode.Password ? options.Password.Validate() : options.Passphrase.Validate();
         if (error is not null)
