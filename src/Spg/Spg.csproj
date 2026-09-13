@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>spg</AssemblyName>
+    <RootNamespace>Spg</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- EFF Large Wordlist (7776 words), CC BY 3.0 US: https://www.eff.org/dice -->
+    <EmbeddedResource Include="eff_large_wordlist.txt" LogicalName="Spg.eff_large_wordlist.txt" />
+  </ItemGroup>
+
+</Project>
