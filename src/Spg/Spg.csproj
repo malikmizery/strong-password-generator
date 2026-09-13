@@ -9,6 +9,15 @@
     <RootNamespace>Spg</RootNamespace>
     <InvariantGlobalization>true</InvariantGlobalization>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Set for every build, not just publish, so build and test also run the trim and single-file analyzers. -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishTrimmed>true</PublishTrimmed>
+  </PropertyGroup>
+
+  <!-- The rest of the publish settings live in Properties/PublishProfiles/SingleFile.pubxml, which Visual Studio
+       also uses. `dotnet publish` picks it by default; `msbuild -t:Publish` needs -p:PublishProfile=SingleFile. -->
+  <PropertyGroup Condition="'$(_IsPublishing)' == 'true' and '$(PublishProfile)' == ''">
+    <PublishProfile>SingleFile</PublishProfile>
   </PropertyGroup>
 
   <ItemGroup>

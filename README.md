@@ -30,8 +30,14 @@ anything under 64 bits is flagged **WEAK**.
 
 ```powershell
 dotnet test spg.slnx
-dotnet publish src/Spg -c Release -o out     # out/spg.exe
+dotnet publish src/Spg -c Release -o out     # out/spg.exe — one file, no .NET needed
+dotnet publish src/Spg -c Release -o out -r linux-x64   # or osx-arm64, win-arm64, ...
 ```
+
+Publishing produces a single self-contained, trimmed executable; copy it anywhere on your `PATH`.
+The settings live in `src/Spg/Properties/PublishProfiles/SingleFile.pubxml`, which Visual Studio's
+Publish dialog also uses. With plain MSBuild, name the profile:
+`msbuild src/Spg -t:Publish -restore -p:Configuration=Release -p:PublishProfile=SingleFile`.
 
 ## Attribution
 

@@ -196,6 +196,8 @@ publish/
 # Note: Comment the next line if you want to checkin your web deploy settings,
 # but database connection strings (with potential passwords) will be unencrypted
 *.pubxml
+# ...except the single-file publish profile, which holds no secrets and is needed to build spg.exe
+!src/Spg/Properties/PublishProfiles/SingleFile.pubxml
 *.publishproj
 
 # Microsoft Azure Web App publish settings. Comment the next line if you want to
