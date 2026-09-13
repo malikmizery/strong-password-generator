@@ -55,6 +55,24 @@ public class PasswordGeneratorTests
     }
 
     [Fact]
+    public void Generate_EnvSafe_NeverEmitsDollarOrHash()
+    {
+        var options = new PasswordOptions { Length = 60, Upper = false, Lower = false, Digits = false, EnvSafe = true, AllSymbols = true };
+
+        for (var i = 0; i < Samples; i++)
+            Assert.DoesNotContain(PasswordGenerator.Generate(options), c => c is '$' or '#');
+    }
+
+    [Fact]
+    public void Generate_Exclude_NeverEmitsTheListedCharacters()
+    {
+        var options = new PasswordOptions { Length = 60, Exclude = "aeiouAEIOU&*" };
+
+        for (var i = 0; i < Samples; i++)
+            Assert.DoesNotContain(PasswordGenerator.Generate(options), c => "aeiouAEIOU&*".Contains(c));
+    }
+
+    [Fact]
     public void Generate_IsUniformAcrossTheAlphabet()
     {
         var options = new PasswordOptions { Length = 20, Upper = false, Digits = false, Symbols = false };
@@ -95,6 +113,14 @@ public class PasswordGeneratorTests
         var options = new PasswordOptions { Length = 10, Upper = false, Lower = false, Symbols = false, ExcludeAmbiguous = true };
 
         Assert.Equal(30.0, PasswordGenerator.EntropyBits(options), precision: 3);  // digits minus 0 and 1: 8^10
+    }
+
+    [Fact]
+    public void EntropyBits_ReflectsExcludedCharacters()
+    {
+        var options = new PasswordOptions { Length = 10, Upper = false, Lower = false, Symbols = false, Exclude = "01234" };
+
+        Assert.Equal(23.2193, PasswordGenerator.EntropyBits(options), precision: 3);  // 5^10
     }
 
     [Fact]

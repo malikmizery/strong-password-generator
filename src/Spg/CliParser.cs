@@ -25,11 +25,14 @@ public static class CliParser
 
         Password options:
           -l, --length <n>         Number of characters (default 20)
+          -e, --env-safe           Leave out $ and #, which .env loaders expand or treat as comments
+          -a, --no-ambiguous       Leave out look-alike characters (0 O 1 l I |)
+          -x, --exclude <chars>    Leave out these characters, e.g. -x '&*'
+          -S, --no-symbols         Leave out symbols
+          -A, --all-symbols        Use all punctuation, not just the common !@#$%^&*
               --no-upper           Leave out uppercase letters
               --no-lower           Leave out lowercase letters
               --no-digits          Leave out digits
-              --no-symbols         Leave out symbols
-              --no-ambiguous       Leave out look-alike characters (0 O 1 l I |)
 
         Passphrase options:
           -p, --passphrase         Generate a passphrase instead of a password
@@ -89,6 +92,26 @@ public static class CliParser
                     options = options with { Password = options.Password with { Length = ParseInt(flag, NextValue()) } };
                     passwordFlag ??= flag;
                     break;
+                case "-e" or "--env-safe":
+                    options = options with { Password = options.Password with { EnvSafe = true } };
+                    passwordFlag ??= flag;
+                    break;
+                case "-a" or "--no-ambiguous":
+                    options = options with { Password = options.Password with { ExcludeAmbiguous = true } };
+                    passwordFlag ??= flag;
+                    break;
+                case "-x" or "--exclude":
+                    options = options with { Password = options.Password with { Exclude = options.Password.Exclude + NextValue() } };
+                    passwordFlag ??= flag;
+                    break;
+                case "-S" or "--no-symbols":
+                    options = options with { Password = options.Password with { Symbols = false } };
+                    passwordFlag ??= flag;
+                    break;
+                case "-A" or "--all-symbols":
+                    options = options with { Password = options.Password with { AllSymbols = true } };
+                    passwordFlag ??= flag;
+                    break;
                 case "--no-upper":
                     options = options with { Password = options.Password with { Upper = false } };
                     passwordFlag ??= flag;
@@ -99,14 +122,6 @@ public static class CliParser
                     break;
                 case "--no-digits":
                     options = options with { Password = options.Password with { Digits = false } };
-                    passwordFlag ??= flag;
-                    break;
-                case "--no-symbols":
-                    options = options with { Password = options.Password with { Symbols = false } };
-                    passwordFlag ??= flag;
-                    break;
-                case "--no-ambiguous":
-                    options = options with { Password = options.Password with { ExcludeAmbiguous = true } };
                     passwordFlag ??= flag;
                     break;
 

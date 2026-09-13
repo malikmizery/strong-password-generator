@@ -5,9 +5,12 @@ A .NET 10 console app that generates random-character passwords and passphrases 
 
 ```text
 spg                                 # interactive: prompts for every option
-spg -l 20               -> k#9Qv!zR2@mXe7}Lp_4w      (the defaults: 20 chars, all sets)
-spg -l 32 -n 5 --no-symbols
-spg --no-ambiguous                  # no 0 O 1 l I |
+spg -l 20               -> k#9Qv!zR2@mXe7*Lp_4w      (the defaults: 20 chars, all sets)
+spg -l 32 -n 5 -S                   # no symbols
+spg -a                              # no look-alikes: 0 O 1 l I |
+spg -e                              # .env-safe: no $ or #
+spg -x '&*'                         # leave out whatever a site rejects
+spg -A                              # all punctuation, not just !@#$%^&*
 spg -p                  -> gravity-Unsaid-pelican-omen3-trilogy-shrank
 spg -p -w 8 -s . --no-capitalize --no-digit
 spg -q | clip                       # stdout carries only the passwords
@@ -16,6 +19,23 @@ spg --help
 
 Passwords go to stdout, one per line. The entropy estimate (and interactive prompts) go to stderr;
 anything under 64 bits is flagged **WEAK**.
+
+## Which characters
+
+The default symbols are `!@#$%^&*` — the eight that password rules accept almost everywhere, and the
+same set most password managers generate by default. `-A, --all-symbols` adds the rest of the
+US-keyboard punctuation (`()-_=+[]{}<>?/~;:,.|`). Quotes, backslash and backtick are never used, so a
+password is safe unquoted in a shell, YAML or JSON.
+
+Three flags narrow the set further, and the entropy estimate accounts for them:
+
+- `-a, --no-ambiguous` drops the look-alikes `0 O 1 l I |`.
+- `-e, --env-safe` drops `$` and `#`. In a `.env` file an unquoted `$NAME` or `${NAME}` is expanded as
+  a variable reference and `#` starts a comment, so a password containing either gets silently
+  truncated or rewritten by whatever loads the file (docker compose, dotenv libraries, most PaaS
+  dashboards). Use this whenever the password is going into a `.env` file or a compose file.
+- `-x, --exclude <chars>` drops any characters you list, e.g. `-x '&*'` for a site that refuses them.
+  A set that ends up empty is simply dropped.
 
 ## Install (Windows)
 

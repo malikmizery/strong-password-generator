@@ -35,8 +35,8 @@ public class InteractivePromptTests
     [Fact]
     public void PasswordAnswers_AreApplied()
     {
-        // mode, length, upper, lower, digits, symbols, exclude ambiguous, count
-        var (options, _) = Run("1\n32\nn\nY\nyes\nNO\ny\n5\n");
+        // mode, length, upper, lower, digits, symbols, exclude ambiguous, env-safe, exclude, count
+        var (options, _) = Run("1\n32\nn\nY\nyes\nNO\ny\nn\n\n5\n");
 
         Assert.Equal(GenerationMode.Password, options.Mode);
         Assert.Equal(32, options.Password.Length);
@@ -45,7 +45,19 @@ public class InteractivePromptTests
         Assert.True(options.Password.Digits);
         Assert.False(options.Password.Symbols);
         Assert.True(options.Password.ExcludeAmbiguous);
+        Assert.False(options.Password.EnvSafe);
+        Assert.Equal("", options.Password.Exclude);
         Assert.Equal(5, options.Count);
+    }
+
+    [Fact]
+    public void EnvSafeAndExcludeAnswers_AreApplied()
+    {
+        var (options, output) = Run("1\n\n\n\n\n\n\ny\n&*\n\n");
+
+        Assert.True(options.Password.EnvSafe);
+        Assert.Equal("&*", options.Password.Exclude);
+        Assert.Contains(".env", output);
     }
 
     [Fact]

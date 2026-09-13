@@ -48,6 +48,28 @@ public class CliParserTests
     }
 
     [Fact]
+    public void ShortExclusionFlags_AreApplied()
+    {
+        var options = ParseOk("-e", "-a", "-x", "&*", "-A", "-S");
+
+        Assert.True(options.Password.EnvSafe);
+        Assert.True(options.Password.ExcludeAmbiguous);
+        Assert.Equal("&*", options.Password.Exclude);
+        Assert.True(options.Password.AllSymbols);
+        Assert.False(options.Password.Symbols);
+    }
+
+    [Fact]
+    public void LongExclusionFlags_AreApplied()
+    {
+        var options = ParseOk("--env-safe", "--exclude", "xyz", "--all-symbols");
+
+        Assert.True(options.Password.EnvSafe);
+        Assert.Equal("xyz", options.Password.Exclude);
+        Assert.True(options.Password.AllSymbols);
+    }
+
+    [Fact]
     public void PassphraseFlags_AreApplied()
     {
         var options = ParseOk("-p", "-w", "8", "-s", ".", "--no-capitalize", "--no-digit");
@@ -81,11 +103,15 @@ public class CliParserTests
     [InlineData("-p --no-symbols", "--no-symbols")]
     [InlineData("-w 8", "-w")]
     [InlineData("--no-digit", "--no-digit")]
+    [InlineData("-p -e", "-e")]
+    [InlineData("-p -x abc", "-x")]
+    [InlineData("-x", "-x")]
     public void BadArguments_ReportTheOffendingToken(string args, string token) =>
         Assert.Contains(token, ParseError(args.Split(' ')));
 
     [Theory]
     [InlineData("--no-upper --no-lower --no-digits --no-symbols")]
+    [InlineData("-x 0123456789 --no-upper --no-lower --no-symbols")]
     [InlineData("-l 3")]
     [InlineData("-l 1025")]
     [InlineData("-n 0")]

@@ -21,6 +21,8 @@ public class AppTests
         Assert.Equal(0, exit);
         Assert.Contains("--passphrase", stdout);
         Assert.Contains("--length", stdout);
+        Assert.Contains("--env-safe", stdout);
+        Assert.Contains("--exclude", stdout);
     }
 
     [Fact]

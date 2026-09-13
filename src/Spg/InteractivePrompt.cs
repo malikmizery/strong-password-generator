@@ -34,6 +34,8 @@ public sealed class InteractivePrompt(TextReader input, TextWriter output)
                 Digits = AskYesNo("Include digits?", true),
                 Symbols = AskYesNo("Include symbols?", true),
                 ExcludeAmbiguous = AskYesNo("Leave out look-alike characters (0 O 1 l I |)?", false),
+                EnvSafe = AskYesNo("Will it go in a .env file? (leaves out $ and #)", false),
+                Exclude = AskText("Other characters to leave out", ""),
             };
 
             if (options.Validate() is not { } error)
@@ -61,6 +63,12 @@ public sealed class InteractivePrompt(TextReader input, TextWriter output)
             Capitalize = AskYesNo("Capitalize a random word?", true),
             AddDigit = AskYesNo("Append a digit to a random word?", true),
         };
+    }
+
+    private string AskText(string question, string defaultValue)
+    {
+        output.Write($"{question} [{(defaultValue.Length == 0 ? "none" : defaultValue)}]: ");
+        return ReadAnswer() is { Length: > 0 } answer ? answer : defaultValue;
     }
 
     private int AskInt(string question, int defaultValue, int min, int max)
