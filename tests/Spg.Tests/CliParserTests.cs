@@ -129,6 +129,41 @@ public class CliParserTests
         Assert.Equal(GenerationMode.Passphrase, ParseOk("-p", "-k", "SECRET").Mode);
 
     [Fact]
+    public void Skill_PrintsTheSkill() =>
+        Assert.IsType<ParseResult.Skill>(CliParser.Parse(["--skill"]));
+
+    [Fact]
+    public void InstallSkill_TakesATargetAndDefaultsToProjectScope()
+    {
+        var install = Assert.IsType<ParseResult.InstallSkill>(CliParser.Parse(["--install-skill", "some/dir"]));
+
+        Assert.Equal("some/dir", install.Target);
+        Assert.False(install.Global);
+    }
+
+    [Theory]
+    [InlineData("--install-skill", "claude", "-g")]
+    [InlineData("--global", "--install-skill", "claude")]
+    public void InstallSkill_AcceptsGlobal(params string[] args)
+    {
+        var install = Assert.IsType<ParseResult.InstallSkill>(CliParser.Parse(args));
+
+        Assert.Equal("claude", install.Target);
+        Assert.True(install.Global);
+    }
+
+    [Theory]
+    [InlineData("--skill -l 20", "--skill")]
+    [InlineData("--skill -g", "-g")]
+    [InlineData("--install-skill", "--install-skill")]
+    [InlineData("--install-skill a b", "b")]
+    [InlineData("--install-skill claude -l 20", "-l")]
+    [InlineData("-g", "-g")]
+    [InlineData("-g -l 20", "-g")]
+    public void SkillFlags_StandAlone(string args, string token) =>
+        Assert.Contains(token, ParseError(args.Split(' ')));
+
+    [Fact]
     public void PassphraseFlags_AreApplied()
     {
         var options = ParseOk("-p", "-w", "8", "-s", ".", "--no-capitalize", "--no-digit");

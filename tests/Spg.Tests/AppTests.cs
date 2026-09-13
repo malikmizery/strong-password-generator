@@ -123,6 +123,7 @@ public class AppTests
         Assert.Contains("--env-safe", stdout);
         Assert.Contains("--exclude", stdout);
         Assert.Contains("--key", stdout);
+        Assert.Contains("--install-skill", stdout);
     }
 
     [Fact]
@@ -179,6 +180,46 @@ public class AppTests
         }
     }
 
+    [Fact]
+    public void Skill_PrintsAnAgentSkillToStdout()
+    {
+        var (exit, stdout, stderr) = Run("--skill");
+
+        Assert.Equal(0, exit);
+        Assert.StartsWith("---", stdout);
+        Assert.Contains("name: spg", stdout);
+        Assert.Contains("spg -k", stdout);
+        Assert.Empty(stderr);
+    }
+
+    [Fact]
+    public void InstallSkill_WritesSkillMdIntoAnSpgFolder()
+    {
+        var dir = TempPath("skills");
+        try
+        {
+            var (exit, stdout, stderr) = Run(["--install-skill", dir]);
+
+            Assert.Equal(0, exit);
+            Assert.Empty(stdout);
+            var file = Path.Combine(dir, "spg", "SKILL.md");
+            Assert.Contains(file, stderr);
+            Assert.Equal(Run("--skill").Out, File.ReadAllText(file));
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void InstallSkill_GlobalWithADirectory_FailsWithUsageError()
+    {
+        var (exit, _, stderr) = Run("--install-skill some/dir -g");
+
+        Assert.Equal(2, exit);
+        Assert.Contains("--global", stderr);
+    }
 
     [Fact]
     public void BadArgument_FailsWithUsageErrorOnStderr()

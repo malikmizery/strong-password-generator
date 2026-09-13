@@ -28,6 +28,11 @@ public static class App
             case ParseResult.Help:
                 output.Write(CliParser.Usage);
                 return ExitOk;
+            case ParseResult.Skill:
+                output.Write(SkillInstaller.Text);
+                return ExitOk;
+            case ParseResult.InstallSkill install:
+                return InstallSkill(install, error);
             case ParseResult.Error parseError:
                 return UsageError(parseError.Message, error);
             case ParseResult.Interactive:
@@ -106,6 +111,25 @@ public static class App
         return string.IsNullOrEmpty(line)
             ? throw new InvalidOperationException("Nothing to store: stdin was empty.")
             : line;
+    }
+
+    private static int InstallSkill(ParseResult.InstallSkill install, TextWriter error)
+    {
+        try
+        {
+            var path = SkillInstaller.Install(install.Target, install.Global);
+            error.WriteLine($"Installed the spg skill to {path}");
+            return ExitOk;
+        }
+        catch (ArgumentException e)
+        {
+            return UsageError(e.Message, error);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            error.WriteLine($"spg: {e.Message}");
+            return ExitFailure;
+        }
     }
 
     private static int UsageError(string message, TextWriter error)

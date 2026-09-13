@@ -18,6 +18,7 @@ spg --stdin -k DB_PASSWORD          # store a password you already have, quoted 
 spg -p                  -> gravity-Unsaid-pelican-omen3-trilogy-shrank
 spg -p -w 8 -s . --no-capitalize --no-digit
 spg -q                              # stdout carries only the passwords, nothing on stderr
+spg --install-skill claude          # teach an AI coding agent to use spg safely
 spg --help
 ```
 
@@ -78,6 +79,27 @@ spg --stdin -k Db:Password -u         # or into dotnet user secrets
 The password is read from stdin on purpose: as a command-line argument it would land in your shell
 history and be visible to every process on the machine. A password containing both `'` and `$` is
 refused, because no `.env` spelling of it is portable across loaders — generate a new one instead.
+
+## AI coding agents
+
+If you let an AI agent (Claude Code, Codex, Gemini CLI, Cursor, Copilot, …) set up your projects,
+you probably do not want it inventing passwords — they are not random — and you definitely do not
+want the real password sitting in a chat transcript that may be logged, reviewed, or used for training.
+
+`spg --install-skill <harness>` installs an [Agent Skill](https://agentskills.io) (`SKILL.md`) that
+allows the agent exactly two forms — `spg -k NAME` (`.env` file) and `spg -k NAME -u` (dotnet user
+secrets) — and forbids the rest: no bare `spg`, no clipboard, no redirects, never reading the secret
+back, and reporting only the variable name and destination. The agent uses the password without
+ever seeing it. If you paste an existing password into the chat, the skill tells the agent to treat
+it as exposed and suggest rotating it.
+
+```text
+spg --install-skill claude       # ./.claude/skills/spg/SKILL.md  (this project only)
+spg --install-skill claude -g    # ~/.claude/skills/spg/SKILL.md  (every project)
+spg --install-skill codex -g     # also: gemini, cursor, copilot
+spg --install-skill some/dir     # any skills directory
+spg --skill                      # print the skill to stdout
+```
 
 ## Install (Windows)
 

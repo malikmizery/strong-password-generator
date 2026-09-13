@@ -10,6 +10,12 @@ public abstract record ParseResult
 
     public sealed record Interactive : ParseResult;
 
+    /// <summary>Print the Agent Skill to stdout.</summary>
+    public sealed record Skill : ParseResult;
+
+    /// <summary>Write the Agent Skill for <paramref name="Target"/> (a harness name or a directory).</summary>
+    public sealed record InstallSkill(string Target, bool Global) : ParseResult;
+
     public sealed record Error(string Message) : ParseResult;
 }
 
@@ -55,6 +61,13 @@ public static class CliParser
               --stdin              Read the secret from stdin instead of generating one, so an existing
                                    password can be stored quoted correctly (never pass it as an argument)
 
+        AI agent skill:
+              --skill              Print the Agent Skill (SKILL.md) that teaches an AI coding agent to
+                                   use spg without the secret ever entering its transcript
+              --install-skill <t>  Write it for a harness (claude, codex, gemini, cursor, copilot) under
+                                   the current folder, or into any skills directory
+          -g, --global             With --install-skill <harness>: install under your home folder instead
+
         General:
           -n, --count <n>          How many to generate (default 1)
           -q, --quiet              Don't print the entropy estimate to stderr
@@ -71,12 +84,52 @@ public static class CliParser
 
         try
         {
-            return new ParseResult.Run(ParseOptions(args));
+            return args.Any(arg => arg is "--skill" or "--install-skill" or "-g" or "--global")
+                ? ParseSkill(args)
+                : new ParseResult.Run(ParseOptions(args));
         }
         catch (UsageException e)
         {
             return new ParseResult.Error(e.Message);
         }
+    }
+
+    // --skill and --install-skill are commands of their own; mixing them with generation flags is a mistake.
+    private static ParseResult ParseSkill(IReadOnlyList<string> args)
+    {
+        string? target = null;
+        string? globalFlag = null;
+        var print = false;
+        string? stray = null;
+
+        for (var i = 0; i < args.Count; i++)
+        {
+            switch (args[i])
+            {
+                case "--skill":
+                    print = true;
+                    break;
+                case "--install-skill":
+                    target = ++i < args.Count ? args[i] : throw new UsageException("--install-skill expects a harness name or a directory.");
+                    break;
+                case "-g" or "--global":
+                    globalFlag = args[i];
+                    break;
+                default:
+                    stray ??= args[i];
+                    break;
+            }
+        }
+
+        if (print && (target is not null || globalFlag is not null || stray is not null))
+            throw new UsageException($"--skill takes no other options ('{stray ?? globalFlag ?? "--install-skill"}' given).");
+        if (print)
+            return new ParseResult.Skill();
+        if (target is null)
+            throw new UsageException($"{globalFlag} requires --install-skill <harness>.");
+        if (stray is not null)
+            throw new UsageException($"'{stray}' cannot be combined with --install-skill.");
+        return new ParseResult.InstallSkill(target, globalFlag is not null);
     }
 
     private static CliOptions ParseOptions(IReadOnlyList<string> args)

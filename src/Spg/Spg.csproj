@@ -23,6 +23,8 @@
   <ItemGroup>
     <!-- EFF Large Wordlist (7776 words), CC BY 3.0 US: https://www.eff.org/dice -->
     <EmbeddedResource Include="eff_large_wordlist.txt" LogicalName="Spg.eff_large_wordlist.txt" />
+    <!-- The Agent Skill that `spg` prints (skill) and installs (install-skill). -->
+    <EmbeddedResource Include="SKILL.md" LogicalName="Spg.SKILL.md" />
   </ItemGroup>
 
 </Project>
