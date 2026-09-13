@@ -17,6 +17,18 @@ spg --help
 Passwords go to stdout, one per line. The entropy estimate (and interactive prompts) go to stderr;
 anything under 64 bits is flagged **WEAK**.
 
+## Install (Windows)
+
+```powershell
+irm https://github.com/malikmizery/strong-password-generator/releases/latest/download/install.ps1 | iex
+```
+
+This downloads the latest `spg.exe`, checks it against the release's `SHA256SUMS.txt`, puts it in
+`%USERPROFILE%\.local\bin` and adds that folder to your user `PATH` (open a new terminal afterwards).
+Run it again to update; delete the file to uninstall. Set `SPG_INSTALL_DIR` to install somewhere else, or
+`SPG_NO_MODIFY_PATH=1` to leave `PATH` untouched. You can also download `spg.exe` directly from the
+[latest release](https://github.com/malikmizery/strong-password-generator/releases/latest).
+
 ## How it works
 
 - **Passwords**: every character is drawn uniformly from the union of the enabled sets, and the draw is
